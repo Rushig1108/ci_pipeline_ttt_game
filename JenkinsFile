@@ -1,0 +1,73 @@
+pipeline {
+    agent any
+    environment {
+        IMAGE_NAME = "TTT-game"
+        IMAGE_TAG = "${BUILD_NUMBER}"
+        K8_REPO = "https://github.com/Rushig1108/ttt_game_manifests"
+        K8_REPO_EMAIL = "rushigunjal17@gmail.com"
+        K8_REPO_USERNAME = "Rushig1108"
+        SONAR_URL = "http://34.201.116.83:9000"
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    git url: 'https://github.com/Rushig1108/ci_pipeline_ttt_game.git', branch: 'main'
+                }
+            }
+        }
+        stage('Unit Test') {
+            steps {
+                script {
+                    echo "Running tests"
+                    dir('ci_pipeline_ttt_game') {
+                        sh "npm install"
+                        sh "npm test"
+                    }
+                }
+            }
+        }
+        stage('Static Code Analysis') {
+            steps {
+                script {
+                    echo "Running SonarQube Analysis..."
+                    withSonarQubeEnv('SonarQube') {
+                        dir('ci_pipeline_ttt_game') {
+                            sh 'sonar-scanner -Dsonar.projectKey=ttt-game -Dsonar.sources=src -Dsonar.host.url=http://34.201.116.83:9000'
+                        }
+                    }
+                    timeout(time: 5, unit: 'MINUTES') {
+                        def qualityGate = waitForQualityGate()
+                        if (qualityGate.status != 'OK') {
+                            error "Pipeline failed due to SonarQube quality gate failure: ${qualityGate.status}"
+                        }
+                    }
+                }
+            }
+        }
+        stage('Building Docker Image') {
+            steps {
+                script {
+                    echo "Building Docker image"
+                    dir('ci_pipeline_ttt_game') {
+                        sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                    }
+                }
+            }
+        }
+        stage('Scanning the Image') {
+            steps {
+                script {
+                    echo "Scanning the image"
+                    def scanResult = sh(
+                        script: "trivy image --exit-code 1 --severity HIGH,CRITICAL ${IMAGE_NAME}:${IMAGE_TAG}",
+                        returnStatus: true
+                    )
+                    if (scanResult != 0) {
+                        error("Security scan failed! Image contains HIGH or CRITICAL vulnerabilities.")
+                    }
+                }
+            }
+        }
+    }
+}
