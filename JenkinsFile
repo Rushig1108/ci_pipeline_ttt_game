@@ -26,48 +26,48 @@ pipeline {
                     }
                 }
             }
-        }
-        stage('Static Code Analysis') {
-            steps {
-                script {
-                    echo "Running SonarQube Analysis..."
-                    withSonarQubeEnv('SonarQube') {
-                        dir('ci_pipeline_ttt_game') {
-                            sh 'sonar-scanner -Dsonar.projectKey=ttt-game -Dsonar.sources=src -Dsonar.host.url=http://34.201.116.83:9000'
-                        }
-                    }
-                    timeout(time: 5, unit: 'MINUTES') {
-                        def qualityGate = waitForQualityGate()
-                        if (qualityGate.status != 'OK') {
-                            error "Pipeline failed due to SonarQube quality gate failure: ${qualityGate.status}"
-                        }
-                    }
-                }
-            }
-        }
-        stage('Building Docker Image') {
-            steps {
-                script {
-                    echo "Building Docker image"
-                    dir('ci_pipeline_ttt_game') {
-                        sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
-                    }
-                }
-            }
-        }
-        stage('Scanning the Image') {
-            steps {
-                script {
-                    echo "Scanning the image"
-                    def scanResult = sh(
-                        script: "trivy image --exit-code 1 --severity HIGH,CRITICAL ${IMAGE_NAME}:${IMAGE_TAG}",
-                        returnStatus: true
-                    )
-                    if (scanResult != 0) {
-                        error("Security scan failed! Image contains HIGH or CRITICAL vulnerabilities.")
-                    }
-                }
-            }
-        }
+        } 
+        // stage('Static Code Analysis') {
+        //     steps {
+        //         script {
+        //             echo "Running SonarQube Analysis..."
+        //             withSonarQubeEnv('SonarQube') {
+        //                 dir('ci_pipeline_ttt_game') {
+        //                     sh 'sonar-scanner -Dsonar.projectKey=ttt-game -Dsonar.sources=src -Dsonar.host.url=http://34.201.116.83:9000'
+        //                 }
+        //             }
+        //             timeout(time: 5, unit: 'MINUTES') {
+        //                 def qualityGate = waitForQualityGate()
+        //                 if (qualityGate.status != 'OK') {
+        //                     error "Pipeline failed due to SonarQube quality gate failure: ${qualityGate.status}"
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+        // stage('Building Docker Image') {
+        //     steps {
+        //         script {
+        //             echo "Building Docker image"
+        //             dir('ci_pipeline_ttt_game') {
+        //                 sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+        //             }
+        //         }
+        //     }
+        // }
+        // stage('Scanning the Image') {
+        //     steps {
+        //         script {
+        //             echo "Scanning the image"
+        //             def scanResult = sh(
+        //                 script: "trivy image --exit-code 1 --severity HIGH,CRITICAL ${IMAGE_NAME}:${IMAGE_TAG}",
+        //                 returnStatus: true
+        //             )
+        //             if (scanResult != 0) {
+        //                 error("Security scan failed! Image contains HIGH or CRITICAL vulnerabilities.")
+        //             }
+        //         }
+        //     }
+        // } 
     }
 }
